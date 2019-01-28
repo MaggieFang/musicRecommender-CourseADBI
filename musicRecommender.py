@@ -52,7 +52,7 @@ print(testData.count())
 
 def modelEval(model, dataset):
     allArtist = list(set(userArtistData.map(lambda x: x[1]).collect()))   # all artist list
-    validUser = list(set(testData.map(lambda x: x[0]).collect()))         # users to validate
+    validUser = list(set(dataset.map(lambda x: x[0]).collect()))         # users to validate
 
     validationDict  = dataset.map(lambda x :(x[0],x[1])).groupByKey().mapValues(list).collectAsMap()
     trainDataDict = trainData.map(lambda x :(x[0],x[1])).groupByKey().mapValues(list).collectAsMap()
@@ -65,8 +65,10 @@ def modelEval(model, dataset):
         for artist in nonTrainArtist:
             tmpList.append((user,artist))
 
-        predict = model.predictAll(sc.parallelize(tmpList))
-        res = predict.takeOrdered(len(trueArtist), key=lambda x: -x[2]) # get the highest predictresult with the len of truetrueArtist
+        predict = model.predictAll(sc.parallelize(tmpList))  # （userId,prodcutId,ranking）
+        print("************"+str(type(predict)))
+        print(predict.collect())
+        res = predict.takeOrdered(len(trueArtist), key=lambda x: -x[2]) # get the highest predict result with the len of truetrueArtist
 
         predictArtist = []
         for item in res:
@@ -78,7 +80,7 @@ def modelEval(model, dataset):
     return totalScore/len(validUser)  # the average score
 
 # Model train
-ranks = [2, 10, 20]
+ranks = [2]
 for rank in ranks:
     model = ALS.trainImplicit(trainData, rank = rank, seed=345)
     score = modelEval(model, validationData)
